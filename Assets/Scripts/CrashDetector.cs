@@ -9,6 +9,7 @@ public class CrashDetector : MonoBehaviour
 
 
   AudioSource audioSource;
+  bool hasCrashed = false;
   void Start()
   {
       audioSource = GetComponent<AudioSource>();
@@ -19,14 +20,23 @@ public class CrashDetector : MonoBehaviour
 
        if (other.gameObject.layer == layer)
        {
-           Debug.Log("CRASH!!!!");
+           Crash();
+           
+    }
+}
+public void Crash()
+{
+    if (hasCrashed) return;
+    hasCrashed = true;
+
+    Debug.Log("CRASH!!!!");
            crashParticles.Play();
            //play sound
            audioSource.PlayOneShot(crashSound);
 
           Invoke(nameof(reloadScene), 1.5f);
-    }
-}
+          }
+
  void reloadScene()
   {
       SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);

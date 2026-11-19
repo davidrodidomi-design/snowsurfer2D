@@ -1,114 +1,140 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("PlayerController Movement Settings")]
-    [SerializeField] private float boostMultiplier = 30f; // Multiplier for the torque applied to the player
-    [SerializeField] private float baseSpeed = 15f; // Base speed of the player
+    [SerializeField] private float boostMultiplier = 30f; // Multiplier for the boost speed
+    [SerializeField] private float baseSpeed = 15f; 
+    [SerializeField] private ScoreManager scoreManager;   
+    [SerializeField] private GameObject pauseMenuPanel;
+    [SerializeField] private float jumpForce = 5; 
+    
 
-    [Header("Score Manager")]
-    [SerializeField] private ScoreManager scoreManager; // Reference to the ScoreManager script
-
-    [Header("Pause Menu")]
-    [SerializeField] private GameObject pauseMenu; // Reference to the pause menu object
-
-   
-
+    
     Rigidbody2D rb;
     SurfaceEffector2D surfaceEffector2D;
 
-
     InputAction moveAction;
+    InputAction jumpAction;
+    bool isGrounded; 
     Vector2 moveValue ; 
     int flipCount;
     float totalRotation;
     float previousRotation;
 
-    float maxTorque = 500f; // Maximum torque value to limit the rotation speed
+    float maxTorque = 500f;
 
-
-    private bool isPaused = false; // Flag to track the pause state
+    private bool isPaused = false; 
 
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        
-        Time.timeScale = 1f; // Ensure the game starts unpaused
+        Time.timeScale = 1f; 
 
-        //actve the selected character sprite
+        //Active the selected character sprite 
         int selectedCharacter = PlayerPrefs.GetInt("SelectedCharacter", 0);
         transform.GetChild(0).GetChild(selectedCharacter).gameObject.SetActive(true);
-        
-
 
         // Get the Move action from the Input System
         moveAction = InputSystem.actions.FindAction("Move");
+        
+        jumpAction = InputSystem.actions.FindAction("Jump");
     
         // Get the Rigidbody2D component
         rb = GetComponent<Rigidbody2D>();
-        surfaceEffector2D = FindAnyObjectByType<SurfaceEffector2D>();
+        surfaceEffector2D = FindAnyObjectByType<SurfaceEffector2D>();           
+    
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(Keyboard.current != null && 
+        // Check if the Escape key is pressed
+        if (Keyboard.current != null && 
         Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            TogglePause();
-            
+            ToogglePause();            
         }
-
-
 
         RotatePlayer();
         BoostPlayer();
         CalculateFlips();
+        Jump();
     }
 
-    private void TogglePause()
+    void Jump()
+    {
+        if (isPaused || !isGrounded) return; 
+
+        bool jumpPressed = jumpAction != null ? jumpAction.WasPressedThisFrame() : Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
+        
+        if (jumpPressed)
+        {
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            isGrounded = false;
+        }
+
+    }
+
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Floor"))
+        {
+            isGrounded = true;
+        }
+    }
+
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Floor"))
+        {
+            isGrounded = false;
+        }
+    }
+
+    private void ToogglePause()
     {
         isPaused = !isPaused; 
 
-        pauseMenu.SetActive(isPaused);
+        pauseMenuPanel.SetActive(isPaused); 
 
-        Time.timeScale = isPaused ? 0f : 1f; 
-        
-       
+        Time.timeScale = isPaused ? 0f : 1f;        
     }
 
+    /// <summary>
+    /// Calculates the number of flips the player has performed based on their rotation and updates the score accordingly.
+    /// </summary>
     private void CalculateFlips()
     {
-        float currentRotation = transform.rotation.eulerAngles.z;
-        totalRotation += Mathf.DeltaAngle(previousRotation, currentRotation);
-        if(Mathf.Abs(totalRotation) >= 340f)
+        float currentRotation = transform.rotation.eulerAngles.z; 
+        totalRotation += Mathf.DeltaAngle(previousRotation, currentRotation); 
+        if (Mathf.Abs(totalRotation) >= 340f ) 
         {
             flipCount++;
-            totalRotation = 0f; // Reset the total rotation after a flip
-            scoreManager.UpdateScore(flipCount * 100);
+            totalRotation = 0f;            
+            scoreManager.UpdateScore(flipCount*100); // Update the score based on flips
         }
         previousRotation = currentRotation;
     }
 
     private void BoostPlayer()
     {
-       
-
+        // if the player is moving  (up), increase the speed of the SurfaceEffector2D
         if (moveValue.y > 0)
         {
-            surfaceEffector2D.speed = boostMultiplier; // Apply boost when moving up
+            surfaceEffector2D.speed = boostMultiplier; // Increase speed when moving forward
         }
         else
         {
-            surfaceEffector2D.speed = baseSpeed; // Reset to base speed when not moving up
+            surfaceEffector2D.speed = baseSpeed; // Reset speed when not moving forward
         }
+
     }
 
-    private void RotatePlayer()
+
+private void RotatePlayer()
     {
         // Read the value of the Move action and store it in moveValue
         moveValue = moveAction.ReadValue<Vector2>();
@@ -130,5 +156,4 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-    
 }
