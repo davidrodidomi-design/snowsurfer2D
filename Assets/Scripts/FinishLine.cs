@@ -27,11 +27,17 @@ public class NewMonoBehaviourScript : MonoBehaviour
            audioSource.PlayOneShot(finishSound);
 
            //reload Scene
-           Invoke(nameof(reloadScene), 1.5f);
+           Invoke(nameof(NextLevel), 1.5f);
         }
 
   }
 
+void NextLevel()
+  {
+   int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
+   SceneManager.LoadScene(currentSceneIndex + 1);   
+      
+  }
   void reloadScene()
   {
       SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
